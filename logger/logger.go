@@ -284,30 +284,30 @@ func getLogItem(filename string, level LEVEL) *_LOGITEM {
 	return item
 }
 
-func (this *_LOGITEM) flush() error {
-	if this.fp != nil {
-		return this.fp.Sync()
+func (_log *_LOGITEM) flush() error {
+	if _log.fp != nil {
+		return _log.fp.Sync()
 	}
 	return nil
 }
 
-func (this *_LOGITEM) Close() error {
-	if this.fp != nil {
-		this.fp.Sync()
-		this.fp.Close()
-		this.fp = nil
+func (_log *_LOGITEM) Close() error {
+	if _log.fp != nil {
+		_log.fp.Sync()
+		_log.fp.Close()
+		_log.fp = nil
 	}
 	return nil
 }
 
-func (this *_LOGITEM) rotateDay(fileCount int64) bool {
+func (_log *_LOGITEM) rotateDay(fileCount int64) bool {
 	currTs := time.Now()
-	if this.lastCheckTs <= 0 {
+	if _log.lastCheckTs <= 0 {
 		// 首次运行，不切分
-		this.lastCheckTs = currTs.Unix()
+		_log.lastCheckTs = currTs.Unix()
 		return true
 	}
-	lastCheckTm := time.Unix(this.lastCheckTs, 0)
+	lastCheckTm := time.Unix(_log.lastCheckTs, 0)
 	if lastCheckTm.Year() == currTs.Year() && lastCheckTm.Month() == currTs.Month() && lastCheckTm.Day() == currTs.Day() {
 		// 没有换天，不切换
 		return true
@@ -315,18 +315,18 @@ func (this *_LOGITEM) rotateDay(fileCount int64) bool {
 	logObj.mu.Lock()
 	defer logObj.mu.Unlock()
 	// 两次检查锁，以处理并发问题
-	lastCheckTm = time.Unix(this.lastCheckTs, 0)
+	lastCheckTm = time.Unix(_log.lastCheckTs, 0)
 	if lastCheckTm.Year() == currTs.Year() && lastCheckTm.Month() == currTs.Month() && lastCheckTm.Day() == currTs.Day() {
 		// 没有换天，不切换
 		return true
 	}
-	this.flush()
-	logDir, shortName := filepath.Split(this.filename)
-	//logDir := this.filename[:strings.LastIndex(this.filename, "/")]
-	//shortName := this.filename[strings.LastIndex(this.filename, "/")+1:]
+	_log.flush()
+	logDir, shortName := filepath.Split(_log.filename)
+	//logDir := _log.filename[:strings.LastIndex(_log.filename, "/")]
+	//shortName := _log.filename[strings.LastIndex(_log.filename, "/")+1:]
 	rd, err := ioutil.ReadDir(logDir)
 	if err != nil {
-		this.lg.Print(fmt.Sprintf("[ERROR] rotate log failed:%v", err))
+		_log.lg.Print(fmt.Sprintf("[ERROR] rotate log failed:%v", err))
 		return false
 	}
 	oldLogs := []string{}
@@ -353,32 +353,32 @@ func (this *_LOGITEM) rotateDay(fileCount int64) bool {
 			delFn := filepath.Join(logDir, oldLogs[i])
 			err := os.Remove(delFn)
 			if err != nil {
-				this.lg.Print(fmt.Sprintf("[ERROR] delete old log failed:%v", err))
+				_log.lg.Print(fmt.Sprintf("[ERROR] delete old log failed:%v", err))
 				return false
 			}
 		}
 	}
-	newFn := this.filename + "." + currTs.Format("2006-01-02")
-	err = os.Rename(this.filename, newFn)
+	newFn := _log.filename + "." + currTs.Format("2006-01-02")
+	err = os.Rename(_log.filename, newFn)
 	if err != nil {
-		this.lg.Print(fmt.Sprintf("[ERROR] delete old log failed:%v", err))
+		_log.lg.Print(fmt.Sprintf("[ERROR] delete old log failed:%v", err))
 		return false
 	}
-	this.fp.Close()
-	this.fp, err = os.OpenFile(this.filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
+	_log.fp.Close()
+	_log.fp, err = os.OpenFile(_log.filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
-		this.lg.Print(fmt.Sprintf("[ERROR] open log failed:%v", err))
+		_log.lg.Print(fmt.Sprintf("[ERROR] open log failed:%v", err))
 		os.Exit(-1)
 	}
-	this.lg = log.New(this.fp, "", 0)
-	this.lastCheckTs = currTs.Unix() // 保存最新一次的日志切分时间
+	_log.lg = log.New(_log.fp, "", 0)
+	_log.lastCheckTs = currTs.Unix() // 保存最新一次的日志切分时间
 	return true
 }
 
-func (this *_LOGITEM) rotateSize(fileCount int64, maxFileSize UNIT) bool {
-	size, err := file.Size(this.filename)
+func (_log *_LOGITEM) rotateSize(fileCount int64, maxFileSize UNIT) bool {
+	size, err := file.Size(_log.filename)
 	if err != nil {
-		this.lg.Print(fmt.Sprintf("[ERROR] get log size failed:%v", err))
+		_log.lg.Print(fmt.Sprintf("[ERROR] get log size failed:%v", err))
 		return false
 	}
 	if UNIT(size) < maxFileSize {
@@ -387,19 +387,19 @@ func (this *_LOGITEM) rotateSize(fileCount int64, maxFileSize UNIT) bool {
 	logObj.mu.Lock()
 	defer logObj.mu.Unlock()
 	// 两次检查锁，以处理并发问题
-	size, err = file.Size(this.filename)
+	size, err = file.Size(_log.filename)
 	if err != nil {
-		this.lg.Print(fmt.Sprintf("[ERROR] get log size failed:%v", err))
+		_log.lg.Print(fmt.Sprintf("[ERROR] get log size failed:%v", err))
 		return false
 	}
 	if UNIT(size) < maxFileSize {
 		return true
 	}
-	this.flush()
-	logDir, shortName := filepath.Split(this.filename)
+	_log.flush()
+	logDir, shortName := filepath.Split(_log.filename)
 	rd, err := ioutil.ReadDir(logDir)
 	if err != nil {
-		this.lg.Print(fmt.Sprintf("[ERROR] rotate log failed:%v", err))
+		_log.lg.Print(fmt.Sprintf("[ERROR] rotate log failed:%v", err))
 		return false
 	}
 	oldLogNums := []int{}
@@ -426,40 +426,40 @@ func (this *_LOGITEM) rotateSize(fileCount int64, maxFileSize UNIT) bool {
 			moreLogNum := int64(len(oldLogNums)) - fileCount
 			for i := int64(0); i <= moreLogNum; i++ {
 				// 可能之前会有多少历史日志，全删掉
-				delFn := this.filename + "." + strconv.Itoa(oldLogNums[i])
+				delFn := _log.filename + "." + strconv.Itoa(oldLogNums[i])
 				err := os.Remove(delFn)
 				if err != nil {
-					this.lg.Print(fmt.Sprintf("[ERROR] delete old log failed:%v", err))
+					_log.lg.Print(fmt.Sprintf("[ERROR] delete old log failed:%v", err))
 					return false
 				}
 			}
 		}
 		newNums = oldLogNums[len(oldLogNums)-1] + 1
 	}
-	newFn := this.filename + "." + strconv.Itoa(newNums)
-	err = os.Rename(this.filename, newFn)
+	newFn := _log.filename + "." + strconv.Itoa(newNums)
+	err = os.Rename(_log.filename, newFn)
 	if err != nil {
-		this.lg.Print(fmt.Sprintf("[ERROR] delete old log failed:%v", err))
+		_log.lg.Print(fmt.Sprintf("[ERROR] delete old log failed:%v", err))
 		return false
 	}
-	this.fp.Close()
-	this.fp, err = os.OpenFile(this.filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
+	_log.fp.Close()
+	_log.fp, err = os.OpenFile(_log.filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
-		this.lg.Print(fmt.Sprintf("[ERROR] open log failed:%v", err))
+		_log.lg.Print(fmt.Sprintf("[ERROR] open log failed:%v", err))
 		os.Exit(-1)
 	}
-	this.lg = log.New(this.fp, "", 0)
+	_log.lg = log.New(_log.fp, "", 0)
 	return true
 }
 
-func (this *_LOGFILE) Close() {
-	for _, item := range this.items {
+func (_log *_LOGFILE) Close() {
+	for _, item := range _log.items {
 		item.Close()
 	}
 	return
 }
 
-func (this *_LOGFILE) write(item *_LOGITEM, level LEVEL, data string) bool {
+func (_log *_LOGFILE) write(item *_LOGITEM, level LEVEL, data string) bool {
 	if item.isColor {
 		color_format, ok := LEVEL_COLOR[level]
 		if !ok {
@@ -475,10 +475,10 @@ func (this *_LOGFILE) write(item *_LOGITEM, level LEVEL, data string) bool {
 		// 标准输出，不切日志
 		return true
 	}
-	if this.rotateType == ROTATE_DAY {
-		item.rotateDay(this.maxFileCount)
-	} else if this.rotateType == ROTATE_SIZE {
-		item.rotateSize(this.maxFileCount, this.maxFileSize)
+	if _log.rotateType == ROTATE_DAY {
+		item.rotateDay(_log.maxFileCount)
+	} else if _log.rotateType == ROTATE_SIZE {
+		item.rotateSize(_log.maxFileCount, _log.maxFileSize)
 	}
 	return true
 }
