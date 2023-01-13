@@ -226,7 +226,7 @@ func (request *Request) HttpRequest() (*http.Request, error) {
 func (request *Request) Args() (string, error) {
 	data := map[string]interface{}{
 		"header": request.header,
-		"body":   request.body,
+		"body":   string(request.body),
 		"query":  request.query,
 	}
 	reqBytes, err := json.Marshal(data)

@@ -56,7 +56,6 @@ func operateLog(req *Request) func(ret **Response, err *error) {
 			*err = fmt.Errorf("%s", panic_err)
 			return
 		}
-		//redis_ret, redis_err := redis.String(*ret, *err)
 		if *err != nil {
 			log.Warn("server=HttpClient|url=%s|method=%s|time=%d|args=%s|err=[[%s]]",
 				req.url, req.method, interval, reqStr, *err)
